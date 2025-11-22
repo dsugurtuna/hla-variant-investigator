@@ -10,6 +10,7 @@ This repository contains a suite of Bash scripts designed to interrogate large-s
 | :--- | :--- |
 | `identify_carrier_cohorts.sh` | **Cohort Discovery**: Scans massive PLINK datasets to identify participants carrying specific HLA-DRB1 alleles. Uses efficient dosage extraction and parsing. |
 | `check_allele_availability.sh` | **Data Integrity**: Audits multiple imputation batches to ensure that requested biomarkers are consistently present across all sub-batches. |
+| `screen_disease_cohort.sh` | **Clinical Intersection**: Cross-references a specific clinical cohort (e.g., RA patients) against genetic data to identify carriers of a target allele, handling complex ID mapping. |
 | `audit_dosage_headers.sh` | **Pipeline Forensics**: Inspects dosage file headers to verify column mapping and marker presence, essential for debugging pipeline failures. |
 | `validate_imputation_quality.sh` | **Quality Control**: Cross-references expected marker lists against Beagle R-squared ($R^2$) quality files to detect missing or poorly imputed variants. |
 
