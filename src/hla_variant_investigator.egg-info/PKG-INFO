@@ -1,0 +1,104 @@
+Metadata-Version: 2.4
+Name: hla-variant-investigator
+Version: 2.0.0
+Summary: Forensic analysis toolkit for HLA imputation datasets.
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+
+# HLA Variant Investigator
+
+[![CI](https://github.com/dsugurtuna/hla-variant-investigator/actions/workflows/ci.yml/badge.svg)](https://github.com/dsugurtuna/hla-variant-investigator/actions)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
+[![Portfolio](https://img.shields.io/badge/Status-Portfolio_Project-purple.svg)]()
+
+Forensic analysis toolkit for HLA imputation datasets — carrier identification, dosage auditing, disease-cohort screening, and imputation quality validation.
+
+> **Portfolio disclaimer:** This repository contains sanitised, generalised versions of tooling developed at NIHR BioResource. No real participant data or internal paths are included.
+
+---
+
+## Overview
+
+After HLA imputation (SNP2HLA / CookHLA), downstream analysis requires careful verification. This toolkit provides:
+
+- **Carrier identification** — find participants carrying specific HLA-DRB1 alleles from dosage files, deduplicating across sub-batches.
+- **Dosage header auditing** — verify that all expected markers are consistently present across imputation batches.
+- **Disease-cohort screening** — cross-reference clinical cohort IDs against genotyping data via ID mapping to identify carriers.
+- **Quality validation** — cross-check expected markers against Beagle R-squared files to detect missing or poorly imputed variants.
+
+## Repository Structure
+
+```text
+.
+├── src/hla_investigator/         Python package
+│   ├── __init__.py
+│   ├── carrier.py                Carrier identification engine
+│   ├── auditor.py                Dosage header auditing
+│   ├── screener.py               Disease-cohort screening
+│   └── quality.py                Imputation quality validation
+├── tests/
+│   ├── test_carrier.py
+│   ├── test_auditor.py
+│   └── test_quality.py
+├── legacy/                       Original shell scripts
+│   ├── audit_dosage_headers.sh
+│   ├── check_allele_availability.sh
+│   ├── identify_carrier_cohorts.sh
+│   ├── screen_disease_cohort.sh
+│   ├── validate_imputation_quality.sh
+│   └── utils/id_mapper.awk
+├── .github/workflows/ci.yml
+├── pyproject.toml
+├── Dockerfile
+└── Makefile
+```
+
+## Quick Start
+
+```bash
+pip install -e ".[dev]"
+```
+
+### Python API
+
+```python
+from hla_investigator import CarrierIdentifier, DosageAuditor, QualityValidator
+
+# Identify carriers
+ci = CarrierIdentifier(threshold=0.5)
+result = ci.identify_across_batches(
+    ["batch1.raw", "batch2.raw"], allele_column="HLA_DRB1_0101"
+)
+print(f"{result.total_carriers} carriers found")
+ci.export_carrier_list(result, "carriers.txt")
+
+# Audit dosage headers
+auditor = DosageAuditor()  # checks standard DRB1 panel
+report = auditor.audit_batch(["sub1.raw", "sub2.raw"])
+print(auditor.format_report(report))
+
+# Validate imputation quality
+qv = QualityValidator(expected_markers=["HLA_DRB1_0101"], min_r2=0.5)
+qr = qv.validate(["imputed.bgl.r2"])
+print(qv.format_report(qr))
+```
+
+## Testing
+
+```bash
+make test   # or: pytest tests/ -v
+```
+
+## Jira Provenance
+
+- **HLA allele investigation** — carrier cohort identification for DRB1 alleles across imputed datasets.
+- **Imputation QC** — verifying marker completeness and R-squared quality across batches.
+- **Clinical screening** — mapping disease-cohort clinical IDs to genotyping IDs and screening for carriers.
+
+## Licence
+
+MIT

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from hla_investigator.carrier import CarrierIdentifier, CarrierResult
+from hla_investigator.carrier import CarrierIdentifier
 
 
 @pytest.fixture()
