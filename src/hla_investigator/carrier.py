@@ -9,7 +9,6 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set
 
 
 @dataclass
@@ -17,8 +16,8 @@ class CarrierResult:
     """Result of carrier identification for one allele across all batches."""
 
     allele: str
-    carriers: Set[str] = field(default_factory=set)
-    per_batch_counts: Dict[str, int] = field(default_factory=dict)
+    carriers: set[str] = field(default_factory=set)
+    per_batch_counts: dict[str, int] = field(default_factory=dict)
 
     @property
     def total_carriers(self) -> int:
@@ -74,7 +73,7 @@ class CarrierIdentifier:
 
     def identify_across_batches(
         self,
-        dosage_paths: List[str | Path],
+        dosage_paths: list[str | Path],
         allele_column: str,
         sample_col: str = "IID",
     ) -> CarrierResult:

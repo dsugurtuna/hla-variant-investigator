@@ -8,17 +8,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set
 
 
 @dataclass
 class QualityReport:
     """Report from quality validation."""
 
-    expected_markers: List[str]
-    confirmed_present: Set[str] = field(default_factory=set)
-    confirmed_missing: Set[str] = field(default_factory=set)
-    quality_scores: Dict[str, float] = field(default_factory=dict)
+    expected_markers: list[str]
+    confirmed_present: set[str] = field(default_factory=set)
+    confirmed_missing: set[str] = field(default_factory=set)
+    quality_scores: dict[str, float] = field(default_factory=dict)
 
     @property
     def completeness_rate(self) -> float:
@@ -40,15 +39,15 @@ class QualityValidator:
 
     def __init__(
         self,
-        expected_markers: List[str],
+        expected_markers: list[str],
         min_r2: float = 0.0,
     ) -> None:
         self.expected_markers = expected_markers
         self.min_r2 = min_r2
 
-    def _parse_r2_file(self, path: Path) -> Dict[str, float]:
+    def _parse_r2_file(self, path: Path) -> dict[str, float]:
         """Parse a Beagle .bgl.r2 file. Returns marker → R² mapping."""
-        scores: Dict[str, float] = {}
+        scores: dict[str, float] = {}
         with open(path) as fh:
             for line in fh:
                 parts = line.strip().split()
@@ -61,7 +60,7 @@ class QualityValidator:
                     scores[marker] = r2
         return scores
 
-    def validate(self, r2_paths: List[str | Path]) -> QualityReport:
+    def validate(self, r2_paths: list[str | Path]) -> QualityReport:
         """Validate quality across one or more R-squared files.
 
         Parameters
@@ -73,14 +72,14 @@ class QualityValidator:
         -------
         QualityReport
         """
-        all_scores: Dict[str, float] = {}
+        all_scores: dict[str, float] = {}
         for rp in r2_paths:
             all_scores.update(self._parse_r2_file(Path(rp)))
 
         expected_set = set(self.expected_markers)
         present = set()
         missing = set()
-        filtered_scores: Dict[str, float] = {}
+        filtered_scores: dict[str, float] = {}
 
         for marker in expected_set:
             if marker in all_scores:

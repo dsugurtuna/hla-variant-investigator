@@ -8,15 +8,33 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set
-
 
 # Standard DRB1 two-digit alleles expected in a complete imputation
 DEFAULT_DRB1_ALLELES = [
-    f"HLA_DRB1_{a}" for a in [
-        "0101", "0301", "0401", "0402", "0403", "0404", "0405",
-        "0701", "0801", "0802", "0901", "1001", "1101", "1104",
-        "1201", "1301", "1302", "1401", "1501", "1502", "1601", "1602",
+    f"HLA_DRB1_{a}"
+    for a in [
+        "0101",
+        "0301",
+        "0401",
+        "0402",
+        "0403",
+        "0404",
+        "0405",
+        "0701",
+        "0801",
+        "0802",
+        "0901",
+        "1001",
+        "1101",
+        "1104",
+        "1201",
+        "1301",
+        "1302",
+        "1401",
+        "1501",
+        "1502",
+        "1601",
+        "1602",
     ]
 ]
 
@@ -25,9 +43,9 @@ DEFAULT_DRB1_ALLELES = [
 class AuditReport:
     """Report from a dosage header audit."""
 
-    expected_markers: List[str]
-    found_markers: Dict[str, Set[str]] = field(default_factory=dict)
-    missing_markers: Dict[str, Set[str]] = field(default_factory=dict)
+    expected_markers: list[str]
+    found_markers: dict[str, set[str]] = field(default_factory=dict)
+    missing_markers: dict[str, set[str]] = field(default_factory=dict)
 
     @property
     def all_consistent(self) -> bool:
@@ -44,16 +62,16 @@ class DosageAuditor:
         Markers to check for. Defaults to the standard DRB1 panel.
     """
 
-    def __init__(self, expected_markers: List[str] | None = None) -> None:
+    def __init__(self, expected_markers: list[str] | None = None) -> None:
         self.expected_markers = expected_markers or DEFAULT_DRB1_ALLELES
 
-    def _read_header(self, path: Path) -> List[str]:
+    def _read_header(self, path: Path) -> list[str]:
         """Read the first line of a file and return column names."""
         with open(path) as fh:
             first_line = fh.readline().strip()
         return first_line.split("\t")
 
-    def audit_file(self, file_path: str | Path) -> tuple[Set[str], Set[str]]:
+    def audit_file(self, file_path: str | Path) -> tuple[set[str], set[str]]:
         """Audit a single file. Returns (found, missing) marker sets."""
         headers = set(self._read_header(Path(file_path)))
         expected = set(self.expected_markers)
@@ -61,7 +79,7 @@ class DosageAuditor:
         missing = expected - headers
         return found, missing
 
-    def audit_batch(self, file_paths: List[str | Path]) -> AuditReport:
+    def audit_batch(self, file_paths: list[str | Path]) -> AuditReport:
         """Audit multiple dosage files for marker consistency.
 
         Parameters

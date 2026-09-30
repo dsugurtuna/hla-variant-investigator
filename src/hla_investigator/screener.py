@@ -9,7 +9,6 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set
 
 
 @dataclass
@@ -18,8 +17,8 @@ class ScreeningResult:
 
     cohort_size: int
     mapped_count: int
-    carriers_found: Set[str] = field(default_factory=set)
-    unmapped_ids: List[str] = field(default_factory=list)
+    carriers_found: set[str] = field(default_factory=set)
+    unmapped_ids: list[str] = field(default_factory=list)
 
     @property
     def carrier_rate(self) -> float:
@@ -39,8 +38,8 @@ class DiseaseScreener:
     """
 
     def __init__(self, mapping_csv: str | Path) -> None:
-        self._clinical_to_geno: Dict[str, str] = {}
-        self._geno_to_clinical: Dict[str, str] = {}
+        self._clinical_to_geno: dict[str, str] = {}
+        self._geno_to_clinical: dict[str, str] = {}
         self._load_mapping(mapping_csv)
 
     def _load_mapping(self, csv_path: str | Path) -> None:
@@ -55,7 +54,7 @@ class DiseaseScreener:
 
     def screen(
         self,
-        cohort_ids: List[str],
+        cohort_ids: list[str],
         dosage_path: str | Path,
         allele_column: str,
         sample_col: str = "IID",
@@ -77,8 +76,8 @@ class DiseaseScreener:
             Minimum dosage to classify as carrier.
         """
         # Map clinical → genotyping
-        geno_to_clinical: Dict[str, str] = {}
-        unmapped: List[str] = []
+        geno_to_clinical: dict[str, str] = {}
+        unmapped: list[str] = []
         for cid in cohort_ids:
             gid = self._clinical_to_geno.get(cid)
             if gid:
@@ -87,7 +86,7 @@ class DiseaseScreener:
                 unmapped.append(cid)
 
         # Scan dosage file
-        carriers: Set[str] = set()
+        carriers: set[str] = set()
         with open(dosage_path, newline="") as fh:
             reader = csv.DictReader(fh, delimiter="\t")
             for row in reader:

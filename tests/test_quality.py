@@ -4,17 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from hla_investigator.quality import QualityValidator, QualityReport
+from hla_investigator.quality import QualityReport, QualityValidator
 
 
 @pytest.fixture()
 def r2_file(tmp_path: Path) -> Path:
     p = tmp_path / "imputed.bgl.r2"
-    p.write_text(
-        "HLA_DRB1_0101 0.95\n"
-        "HLA_DRB1_0301 0.82\n"
-        "HLA_DRB1_0701 0.30\n"
-    )
+    p.write_text("HLA_DRB1_0101 0.95\nHLA_DRB1_0301 0.82\nHLA_DRB1_0701 0.30\n")
     return p
 
 
