@@ -8,7 +8,7 @@ After HLA imputation, most requests are small and specific: who carries this all
 
 **Why convert every dosage to the "present" allele?** Because SNP2HLA codes HLA alleles as presence (`P`) or absence (`A`), and both PLINK `--recode A` and SNP2HLA's `.dosage` count whichever allele comes first. If that is `A`, a dosage of 2 means "definitely not a carrier". The readers check the counted allele and flip `x -> 2 - x` when needed, for `HLA_` markers only.
 
-**Why one reader for everything?** Because carriers, audits and screening must agree about what a file says. Three separate parsers were how the original version ended up reading tab-separated headers that PLINK never writes.
+**Why one reader for everything?** Because carriers, audits and screening must agree about what a file says. Separate parsers were how the original version came to split only on tabs, while PLINK writes space-separated .raw files unless asked otherwise.
 
 **Why take the lowest r2 across sub-batches?** Because imputation quality can differ by sub-batch, and the people in a poor sub-batch are affected by it. An average would hide them.
 
