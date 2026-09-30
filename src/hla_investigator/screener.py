@@ -1,81 +1,68 @@
-"""Disease cohort screening module.
+"""Screen a clinical cohort for carriers of an HLA allele.
 
-Maps clinical IDs to genotyping IDs via an alias mapping, then screens
-transposed dosage files for allele carriers within a specified disease cohort.
+Clinical IDs are mapped to genotyping IDs, carriers are found in the
+dosage data, and results are mapped back to clinical IDs, so genotyping IDs
+never leave the tool.
 """
 
 from __future__ import annotations
 
 import csv
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from .dosage import read_dosages
 
 
 @dataclass
 class ScreeningResult:
-    """Result of screening a disease cohort for HLA carriers."""
+    """Outcome of screening one cohort."""
 
     cohort_size: int
     mapped_count: int
     carriers_found: set[str] = field(default_factory=set)
     unmapped_ids: list[str] = field(default_factory=list)
+    not_genotyped: list[str] = field(default_factory=list)
 
     @property
     def carrier_rate(self) -> float:
-        if self.mapped_count == 0:
-            return 0.0
-        return len(self.carriers_found) / self.mapped_count
+        """Carriers among mapped participants with genotype data."""
+        screened = self.mapped_count - len(self.not_genotyped)
+        return len(self.carriers_found) / screened if screened else 0.0
 
 
 class DiseaseScreener:
-    """Screen a clinical cohort for HLA allele carriers.
+    """Screen clinical IDs for allele carriers.
 
     Parameters
     ----------
-    mapping_csv : str or Path
-        CSV mapping clinical IDs to genotyping IDs. Must have columns
-        ``clinical_id`` and ``genotyping_id``.
+    mapping_csv : path
+        CSV with ``clinical_id`` and ``genotyping_id`` columns.
     """
 
     def __init__(self, mapping_csv: str | Path) -> None:
         self._clinical_to_geno: dict[str, str] = {}
-        self._geno_to_clinical: dict[str, str] = {}
-        self._load_mapping(mapping_csv)
-
-    def _load_mapping(self, csv_path: str | Path) -> None:
-        with open(csv_path, newline="") as fh:
-            reader = csv.DictReader(fh)
-            for row in reader:
-                cid = row.get("clinical_id", "").strip()
-                gid = row.get("genotyping_id", "").strip()
+        with open(mapping_csv, newline="") as fh:
+            for row in csv.DictReader(fh):
+                cid = (row.get("clinical_id") or "").strip()
+                gid = (row.get("genotyping_id") or "").strip()
                 if cid and gid:
                     self._clinical_to_geno[cid] = gid
-                    self._geno_to_clinical[gid] = cid
 
     def screen(
         self,
-        cohort_ids: list[str],
+        cohort_ids: Sequence[str],
         dosage_path: str | Path,
         allele_column: str,
-        sample_col: str = "IID",
         threshold: float = 0.0,
+        fam_path: str | Path | None = None,
     ) -> ScreeningResult:
-        """Screen a cohort of clinical IDs for carriers in dosage data.
+        """Return carriers (as clinical IDs) among ``cohort_ids``.
 
-        Parameters
-        ----------
-        cohort_ids : list of str
-            Clinical IDs to screen.
-        dosage_path : path
-            Tab-separated dosage file.
-        allele_column : str
-            Column name of the target HLA allele.
-        sample_col : str
-            Column containing genotyping IDs.
-        threshold : float
-            Minimum dosage to classify as carrier.
+        ``dosage_path`` is a PLINK .raw file, or a SNP2HLA .dosage file when
+        ``fam_path`` is given.
         """
-        # Map clinical → genotyping
         geno_to_clinical: dict[str, str] = {}
         unmapped: list[str] = []
         for cid in cohort_ids:
@@ -85,23 +72,19 @@ class DiseaseScreener:
             else:
                 unmapped.append(cid)
 
-        # Scan dosage file
-        carriers: set[str] = set()
-        with open(dosage_path, newline="") as fh:
-            reader = csv.DictReader(fh, delimiter="\t")
-            for row in reader:
-                gid = row.get(sample_col, "").strip()
-                if gid in geno_to_clinical:
-                    try:
-                        dosage = float(row.get(allele_column, "0"))
-                    except (ValueError, TypeError):
-                        continue
-                    if dosage > threshold:
-                        carriers.add(geno_to_clinical[gid])
-
+        dosages = read_dosages(dosage_path, allele_column, fam_path)
+        carriers = {
+            cid
+            for gid, cid in geno_to_clinical.items()
+            if dosages.get(gid, 0) > threshold
+        }
+        not_genotyped = sorted(
+            cid for gid, cid in geno_to_clinical.items() if gid not in dosages
+        )
         return ScreeningResult(
             cohort_size=len(cohort_ids),
             mapped_count=len(geno_to_clinical),
             carriers_found=carriers,
             unmapped_ids=unmapped,
+            not_genotyped=not_genotyped,
         )
