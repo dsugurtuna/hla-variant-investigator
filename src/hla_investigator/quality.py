@@ -1,117 +1,83 @@
-"""Imputation quality validation module.
-
-Cross-references expected HLA markers against Beagle R-squared quality
-files to verify imputation completeness.
-"""
+"""Check expected HLA markers against Beagle r2 values."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set
+
+from .dosage import read_r2
 
 
 @dataclass
 class QualityReport:
-    """Report from quality validation."""
+    """Which expected markers were imputed, and how well."""
 
-    expected_markers: List[str]
-    confirmed_present: Set[str] = field(default_factory=set)
-    confirmed_missing: Set[str] = field(default_factory=set)
-    quality_scores: Dict[str, float] = field(default_factory=dict)
+    expected_markers: list[str]
+    confirmed_present: set[str] = field(default_factory=set)
+    absent: set[str] = field(default_factory=set)
+    below_threshold: set[str] = field(default_factory=set)
+    quality_scores: dict[str, float] = field(default_factory=dict)
+
+    @property
+    def confirmed_missing(self) -> set[str]:
+        """Absent or below the r2 threshold."""
+        return self.absent | self.below_threshold
 
     @property
     def completeness_rate(self) -> float:
-        if len(self.expected_markers) == 0:
+        if not self.expected_markers:
             return 0.0
         return len(self.confirmed_present) / len(self.expected_markers)
 
 
 class QualityValidator:
-    """Validate HLA imputation quality from Beagle R-squared files.
+    """Validate imputation quality from one or more ``.bgl.r2`` files.
 
-    Parameters
-    ----------
-    expected_markers : list of str
-        HLA markers to look for in quality files.
-    min_r2 : float
-        Minimum R-squared threshold for acceptable quality.
+    With several files (one per sub-batch) a marker's score is its lowest
+    r2 across files, so one poorly imputed sub-batch is not hidden by the
+    others. A marker missing from any file is reported as absent.
     """
 
-    def __init__(
-        self,
-        expected_markers: List[str],
-        min_r2: float = 0.0,
-    ) -> None:
-        self.expected_markers = expected_markers
+    def __init__(self, expected_markers: list[str], min_r2: float = 0.0) -> None:
+        self.expected_markers = list(expected_markers)
         self.min_r2 = min_r2
 
-    def _parse_r2_file(self, path: Path) -> Dict[str, float]:
-        """Parse a Beagle .bgl.r2 file. Returns marker → R² mapping."""
-        scores: Dict[str, float] = {}
-        with open(path) as fh:
-            for line in fh:
-                parts = line.strip().split()
-                if len(parts) >= 2:
-                    marker = parts[0]
-                    try:
-                        r2 = float(parts[1])
-                    except ValueError:
-                        continue
-                    scores[marker] = r2
-        return scores
-
-    def validate(self, r2_paths: List[str | Path]) -> QualityReport:
-        """Validate quality across one or more R-squared files.
-
-        Parameters
-        ----------
-        r2_paths : list of paths
-            Beagle .bgl.r2 files to scan.
-
-        Returns
-        -------
-        QualityReport
-        """
-        all_scores: Dict[str, float] = {}
-        for rp in r2_paths:
-            all_scores.update(self._parse_r2_file(Path(rp)))
-
-        expected_set = set(self.expected_markers)
-        present = set()
-        missing = set()
-        filtered_scores: Dict[str, float] = {}
-
-        for marker in expected_set:
-            if marker in all_scores:
-                if all_scores[marker] >= self.min_r2:
-                    present.add(marker)
-                    filtered_scores[marker] = all_scores[marker]
-                else:
-                    missing.add(marker)
+    def validate(self, r2_paths: Sequence[str | Path]) -> QualityReport:
+        per_file = [read_r2(p) for p in r2_paths]
+        report = QualityReport(expected_markers=self.expected_markers)
+        for marker in self.expected_markers:
+            scores = [f[marker] for f in per_file if marker in f]
+            if not per_file or len(scores) < len(per_file):
+                report.absent.add(marker)
+                continue
+            worst = min(scores)
+            report.quality_scores[marker] = worst
+            if worst >= self.min_r2:
+                report.confirmed_present.add(marker)
             else:
-                missing.add(marker)
-
-        return QualityReport(
-            expected_markers=list(expected_set),
-            confirmed_present=present,
-            confirmed_missing=missing,
-            quality_scores=filtered_scores,
-        )
+                report.below_threshold.add(marker)
+        return report
 
     @staticmethod
     def format_report(report: QualityReport) -> str:
-        """Format a human-readable quality report."""
         lines = [
             "HLA Imputation Quality Report",
             "=" * 40,
             f"Expected markers:   {len(report.expected_markers)}",
             f"Confirmed present:  {len(report.confirmed_present)}",
-            f"Confirmed missing:  {len(report.confirmed_missing)}",
+            f"Absent:             {len(report.absent)}",
+            f"Below r2 threshold: {len(report.below_threshold)}",
             f"Completeness:       {report.completeness_rate:.1%}",
         ]
-        if report.confirmed_missing:
-            lines.append("\nMissing markers:")
-            for m in sorted(report.confirmed_missing):
-                lines.append(f"  - {m}")
+        for title, markers in (
+            ("Absent", report.absent),
+            ("Below r2 threshold", report.below_threshold),
+        ):
+            if markers:
+                lines.append(f"\n{title}:")
+                for m in sorted(markers):
+                    score = report.quality_scores.get(m)
+                    suffix = f"  (r2 {score:.2f})" if score is not None else ""
+                    lines.append(f"  - {m}{suffix}")
         return "\n".join(lines)

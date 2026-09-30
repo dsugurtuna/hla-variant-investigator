@@ -2,10 +2,10 @@
 
 __version__ = "2.0.0"
 
+from .auditor import AuditReport, DosageAuditor
 from .carrier import CarrierIdentifier, CarrierResult
-from .auditor import DosageAuditor, AuditReport
+from .quality import QualityReport, QualityValidator
 from .screener import DiseaseScreener, ScreeningResult
-from .quality import QualityValidator, QualityReport
 
 __all__ = [
     "CarrierIdentifier",
