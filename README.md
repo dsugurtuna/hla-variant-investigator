@@ -105,12 +105,6 @@ Works on output from [hla-pipeline-manager](https://github.com/dsugurtuna/hla-pi
 - Look up several alleles in one pass (for example a shared-epitope set).
 - Report per-sample dosage alongside each carrier so borderline calls are visible.
 
-## Jira Provenance
-
-- **HLA allele investigation** — carrier cohort identification for DRB1 alleles across imputed datasets.
-- **Imputation QC** — verifying marker completeness and R-squared quality across batches.
-- **Clinical screening** — mapping disease-cohort clinical IDs to genotyping IDs and screening for carriers.
-
 ## Licence
 
 MIT is declared in `pyproject.toml`, but no licence file is included yet.
