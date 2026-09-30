@@ -55,3 +55,21 @@ class TestDosageAuditor:
         )
         text = DosageAuditor.format_report(report)
         assert "Consistent: Yes" in text
+
+
+def test_audit_real_raw_header_with_counted_alleles(tmp_path: Path) -> None:
+    p = tmp_path / "sub1.raw"
+    p.write_text(
+        "FID IID PAT MAT SEX PHENOTYPE HLA_DRB1_0101_P HLA_DRB1_0301_A rs1_G\n"
+    )
+    auditor = DosageAuditor(expected_markers=["HLA_DRB1_0101", "HLA_DRB1_0301"])
+    found, missing = auditor.audit_file(p)
+    assert found == {"HLA_DRB1_0101", "HLA_DRB1_0301"}
+    assert missing == set()
+
+
+def test_audit_bim_file(tmp_path: Path) -> None:
+    p = tmp_path / "sub1_imputed.bim"
+    p.write_text("6\tHLA_DRB1_0101\t0\t32660000\tP\tA\n")
+    auditor = DosageAuditor(expected_markers=["HLA_DRB1_0101", "HLA_DRB1_0401"])
+    assert auditor.audit_file(p) == ({"HLA_DRB1_0101"}, {"HLA_DRB1_0401"})
